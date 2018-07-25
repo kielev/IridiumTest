@@ -60,16 +60,68 @@ void initClocks(void)
     WDT_A_CLOCKITERATIONS_128M);
 }
 
-void ClassifyString(void)
-{
-    //Print responses to commands
-    //StringClassifyGo = 0;
-    printf("%s\n", IridiumString);
+
+int sendIridiumString(char * String){
+    char IMessage[100];
+
+    printf("\nCommand: AT\n");
+    Iridium_puts("AT\r");
+    while(StringClassifyGo == 0);
+    if(strncmp("OK",IridiumString,2)){
+        StringClassifyGo = 0;
+    } else {
+        printf("Error AT %s\n", IridiumString);
+    }
+
+
+    printf("\nCommand: AT&K0\n");
+    Iridium_puts("AT&K0\r");
+    strcpy(IridiumString, "NO");
+    while(strncmp("OK",IridiumString,2) != 0);
+
+
+    printf("\nCommand: AT+SBDWT\n");
+    Iridium_puts("AT+SBDWT=hello\r");
+    strcpy(IridiumString, "NO");
+    while(strncmp("OK",IridiumString,2) != 0 && strncmp("ERROR",IridiumString,5) != 0);
+
+    if(!strncmp("ERROR",IridiumString,5))
+        printf("error\n");
+
+
+    printf("\nCommand: AT+SBDIX\n");
+    Iridium_puts("AT+SBDIX\r");
+    strcpy(IridiumString, "NO");
+    while(strncmp("+SBDIX",IridiumString,6) != 0);
+    if(strncmp("+SBDIX: 32",IridiumString,10) != 0){
+        printf("message fail: %s\n", IridiumString);
+        return 0;
+    }
+    printf("message succeed: %s\n", IridiumString);
+
+    printf("\nCommand: AT+SBDIX\n");
+    Iridium_puts("AT+SBDD0\r");
+    strcpy(IridiumString, "NO");
+    while(strncmp("OK",IridiumString,2) != 0 && strncmp("ERROR",IridiumString,5) != 0);
+
+
+    if(!strncmp(&IridiumString[14],"1,",2)){
+
+        printf("\nCommand: AT+SBDRT\n");
+        Iridium_puts("AT+SBDRT\r");
+        strcpy(IridiumString, "NO");
+        while(strncmp("+SBDRT",IridiumString,6) != 0);
+
+        while(strncmp("$",IridiumString,1) != 0 );
+        printf("Message: %s\n", IridiumString);
+        return 2;
+    }
+    return 1;
 }
 
 
 int main(void){
-    unsigned int count = 0;
+    int ret = -1;
     //Halting WDT
     MAP_WDT_A_holdTimer();
 
@@ -85,41 +137,12 @@ int main(void){
 
     MAP_Interrupt_enableMaster();
 
-    /*while(!(P8->OUT & BIT1)){
-        printf("No Signal\n");
-        Delay1ms(500);
-    }*/
 
+    ret = sendIridiumString("Hello");
 
-    printf("\nCommand: AT\n");
-    Iridium_puts("AT\r");
-    //strcpy(IridiumString, "NO");
+    printf("\nCondition: %d\n", ret);
 
-    while(strncmp("OK",IridiumString,2) != 0);
-
-    printf("\nCommand: AT&K0\n");
-    Iridium_puts("AT&K0\r");
-    strcpy(IridiumString, "NO");
-
-    while(strncmp("OK",IridiumString,2) != 0);
-
-    printf("\nCommand: AT+SBDWT\n");
-    Iridium_puts("AT+SBDWT=Hello\r");
-    strcpy(IridiumString, "NO");
-
-    while(strncmp("OK",IridiumString,2) != 0);
-
-    printf("\nCommand: AT+SBDIX\n");
-    Iridium_puts("AT+SBDIX\r");
-    strcpy(IridiumString, "NO");
-
-    while(strncmp("+SBDIX",IridiumString,6) != 0);
-
-    printf("\nResponse: %s\n",IridiumString);
-
-    printf("\nall done\n");
-
-    return 0;
+    return ret;
 }
 
 
