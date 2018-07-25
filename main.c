@@ -20,6 +20,7 @@ volatile int index = 0;
 volatile int step = 1;
 
 char IridiumString[100];
+char ParameterString[100];
 
 //How a second delay is created without having to use ACLK or another source besides what I know. Delay1ms is included in this
 void parrotdelay(unsigned long ulCount)
@@ -61,62 +62,206 @@ void initClocks(void)
 }
 
 
+int queryLock(){
+    printf("\nCommand: AT+CULK\n");
+    Iridium_puts("AT+CULK?\r");
+    while(StringClassifyGo == 0);
+    if(!strncmp("AT",IridiumString,2))
+        StringClassifyGo = 0;
+    else{
+        printf("AT echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
+    }
+    while(StringClassifyGo == 0);
+    printf("CULK? - %s\n", IridiumString);
+}
+
 int sendIridiumString(char * String){
-    char IMessage[100];
+    char SBDIX[30] = {'\0'};
+    char *tokString;
+    char IMessage[340] = {'\0'};
+    int ret = 0;
 
     printf("\nCommand: AT\n");
     Iridium_puts("AT\r");
     while(StringClassifyGo == 0);
-    if(strncmp("OK",IridiumString,2)){
+    if(!strncmp("AT",IridiumString,2))
         StringClassifyGo = 0;
-    } else {
-        printf("Error AT %s\n", IridiumString);
+    else{
+        printf("AT echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
     }
 
+    while(StringClassifyGo == 0);
+    if(!strncmp("OK",IridiumString,2)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error AT %s\n", IridiumString);
+        return 0;
+    }
 
     printf("\nCommand: AT&K0\n");
     Iridium_puts("AT&K0\r");
-    strcpy(IridiumString, "NO");
-    while(strncmp("OK",IridiumString,2) != 0);
+    while(StringClassifyGo == 0);
+    if(!strncmp("AT&K0",IridiumString,5))
+        StringClassifyGo = 0;
+    else{
+        printf("AT&K0 echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
+    }
+
+    while(StringClassifyGo == 0);
+    if(!strncmp("OK",IridiumString,2)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error AT&K0 %s\n", IridiumString);
+        return 0;
+    }
 
 
     printf("\nCommand: AT+SBDWT\n");
-    Iridium_puts("AT+SBDWT=hello\r");
-    strcpy(IridiumString, "NO");
-    while(strncmp("OK",IridiumString,2) != 0 && strncmp("ERROR",IridiumString,5) != 0);
+    Iridium_puts("AT+SBDWT\r");
+    while(StringClassifyGo == 0);
+    if(!strncmp("AT+SBDWT",IridiumString,8))
+        StringClassifyGo = 0;
+    else{
+        printf("AT+SBDWT echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
+    }
 
-    if(!strncmp("ERROR",IridiumString,5))
-        printf("error\n");
+    while(StringClassifyGo == 0);
+    if(!strncmp("READY",IridiumString,5)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error AT+SBDWT %s\n", IridiumString);
+        return 0;
+    }
+
+    printf("\nCommand: message\n");
+    strcpy(IMessage, "$1234567891011072118,124531,0841.8477,N,06652.1948,W,6.33\n"
+                     "072118,124500,3286.3906,N,06550.5332,W,7.33\r");
+    Iridium_puts(IMessage);
+    while(StringClassifyGo == 0);
+    if(!strncmp("OK",IridiumString,2) || !strncmp("0",IridiumString,1)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error message %s\n", IridiumString);
+        return 0;
+    }
 
 
     printf("\nCommand: AT+SBDIX\n");
     Iridium_puts("AT+SBDIX\r");
-    strcpy(IridiumString, "NO");
-    while(strncmp("+SBDIX",IridiumString,6) != 0);
-    if(strncmp("+SBDIX: 32",IridiumString,10) != 0){
-        printf("message fail: %s\n", IridiumString);
-        return 0;
+    while(StringClassifyGo == 0);
+    if(!strncmp("AT",IridiumString,2) || !strncmp("\rAT",IridiumString,3))
+        StringClassifyGo = 0;
+    else{
+        printf("AT+SBDIX echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
     }
-    printf("message succeed: %s\n", IridiumString);
 
-    printf("\nCommand: AT+SBDIX\n");
+    while(StringClassifyGo == 0);
+    if(!strncmp("+SBDIX",IridiumString,6)){
+        strcpy(SBDIX, IridiumString);
+        StringClassifyGo = 0;
+    } else {
+        printf("Error +SBDIX %s\n", IridiumString);
+        StringClassifyGo = 0;
+    }
+
+    while(StringClassifyGo == 0);
+    if(!strncmp("\r",IridiumString,1)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error return %s\n", IridiumString);
+    }
+
+    while(StringClassifyGo == 0);
+    if(!strncmp("OK",IridiumString,2)){
+        StringClassifyGo = 0;
+    } else {
+        StringClassifyGo = 0;
+        printf("Error message %s\n", IridiumString);
+    }
+
+    printf("\nCommand: AT+SBDD0\n");
     Iridium_puts("AT+SBDD0\r");
-    strcpy(IridiumString, "NO");
-    while(strncmp("OK",IridiumString,2) != 0 && strncmp("ERROR",IridiumString,5) != 0);
-
-
-    if(!strncmp(&IridiumString[14],"1,",2)){
-
-        printf("\nCommand: AT+SBDRT\n");
-        Iridium_puts("AT+SBDRT\r");
-        strcpy(IridiumString, "NO");
-        while(strncmp("+SBDRT",IridiumString,6) != 0);
-
-        while(strncmp("$",IridiumString,1) != 0 );
-        printf("Message: %s\n", IridiumString);
-        return 2;
+    while(StringClassifyGo == 0);
+    if(!strncmp("AT",IridiumString,2))
+        StringClassifyGo = 0;
+    else{
+        printf("AT+SBDD0 echo error %s\n", IridiumString);
+        StringClassifyGo = 0;
     }
-    return 1;
+
+    while(StringClassifyGo == 0);
+    if(!strncmp("0",IridiumString,1)){
+        StringClassifyGo = 0;
+    } else {
+        printf("Error AT+SBDD0 %s\n", IridiumString);
+        StringClassifyGo = 0;
+    }
+
+    printf("message: %s --> ", SBDIX);
+    tokString = strtok(SBDIX, ",");
+    if(atoi(&tokString[8]) > 2 || strlen(SBDIX) < 10){
+        printf("send failure - %d\n", atoi(&tokString[8]));
+        ret = 0;
+    } else{
+        printf("send success\n");
+        ret = 1;
+    }
+
+    strtok(NULL, ",");
+    tokString = strtok(NULL, ",");
+    if(atoi(tokString) == 1){
+        printf("message received\n");
+
+        Iridium_puts("AT+SBDRT\r");
+        while(StringClassifyGo == 0);
+        if(!strncmp("AT",IridiumString,2))
+            StringClassifyGo = 0;
+        else{
+            printf("AT+SBRT echo error %s\n", IridiumString);
+            StringClassifyGo = 0;
+        }
+
+        while(StringClassifyGo == 0);
+        if(!strncmp("+SBDRT",IridiumString,6))
+            StringClassifyGo = 0;
+        else{
+            printf("AT+SBRT error %s\n", IridiumString);
+            StringClassifyGo = 0;
+        }
+
+        while(StringClassifyGo == 0);
+        if(!strncmp("\r",IridiumString,1)){
+            StringClassifyGo = 0;
+        } else {
+            StringClassifyGo = 0;
+            printf("Error return %s\n", IridiumString);
+        }
+
+        while(StringClassifyGo == 0);
+        if(!strncmp("$",IridiumString,1)){
+            strcpy(ParameterString, IridiumString);
+            StringClassifyGo = 0;
+        } else {
+            printf("message error %s\n", IridiumString);
+            StringClassifyGo = 0;
+        }
+        printf("Received Message - %s\n", ParameterString);
+        return (ret+2);
+
+    } else {
+        printf("no message received - %d\n", atoi(tokString));
+        return ret;
+    }
 }
 
 
@@ -137,6 +282,7 @@ int main(void){
 
     MAP_Interrupt_enableMaster();
 
+    //queryLock();
 
     ret = sendIridiumString("Hello");
 
